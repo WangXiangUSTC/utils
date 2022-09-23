@@ -1195,10 +1195,21 @@ func getRecordInOrderedMapFromReceiver(receiver []interface{}, fields []Field) (
 			}
 		default:
 			{
-				nullVal := value.(*sql.NullString)
-				record.Set(field.Name, nil)
-				if nullVal.Valid {
-					record.Set(field.Name, nullVal.String)
+				if nullVal, ok := value.(*sql.NullString); ok {
+					record.Set(field.Name, nil)
+					if nullVal.Valid {
+						record.Set(field.Name, nullVal.String)
+					}
+				} else if rawVal, ok := value.(*sql.RawBytes); ok {
+					fmt.Printf("unknown type %s, field: %s, value: %v\n", field.Type, field.Name, value)
+					record.Set(field.Name, nil)
+					if rawVal != nil && *rawVal != nil {
+						val := make([]byte, len(*rawVal))
+						copy(val, *rawVal)
+						record.Set(field.Name, val)
+					}
+				} else {
+					panic(fmt.Sprintf("unknown type %s, field: %s, value: %v", field.Type, field.Name, value))
 				}
 			}
 		}
